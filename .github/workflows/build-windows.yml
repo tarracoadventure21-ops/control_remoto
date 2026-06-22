@@ -1,0 +1,43 @@
+name: Build Control Remoto (Windows .exe)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "control_remoto.py"
+      - ".github/workflows/build-windows.yml"
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar PyInstaller
+        run: pip install --upgrade pyinstaller
+
+      - name: Compilar control_remoto.exe
+        run: pyinstaller --onefile --windowed --name control_remoto control_remoto.py
+
+      - name: Subir el .exe como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: control_remoto-windows
+          path: dist/control_remoto.exe
+
+      - name: Publicar Release (solo en tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/control_remoto.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
