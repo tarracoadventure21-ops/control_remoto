@@ -1,4 +1,4 @@
-name: Build Control Remoto (Windows .exe)
+name: Build Control Remoto (Windows + Mac)
 
 on:
   workflow_dispatch:
@@ -6,35 +6,50 @@ on:
     branches: [main]
     tags: ["v*"]
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
-
     steps:
-      - name: Descargar el codigo
-        uses: actions/checkout@v4
-
-      - name: Instalar Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Instalar PyInstaller
-        run: pip install --upgrade pyinstaller
-
-      - name: Compilar control_remoto.exe
-        run: pyinstaller --onefile --windowed --name control_remoto control_remoto.py
-
-      - name: Subir el .exe como artifact
-        uses: actions/upload-artifact@v4
+      - run: pip install --upgrade pyinstaller
+      - run: pyinstaller --onefile --windowed --name control_remoto control_remoto.py
+      - uses: actions/upload-artifact@v4
         with:
           name: control_remoto-windows
           path: dist/control_remoto.exe
 
-      - name: Publicar Release (solo en tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          files: dist/control_remoto.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          python-version: "3.12"
+      - run: pip install --upgrade pyinstaller
+      - run: pyinstaller --windowed --name control_remoto control_remoto.py
+      - name: Comprimir la app de Mac
+        run: ditto -c -k --keepParent dist/control_remoto.app control_remoto-mac.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: control_remoto-macos
+          path: control_remoto-mac.zip
+
+  release:
+    needs: [build-windows, build-macos]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/control_remoto-windows/control_remoto.exe
+            artifacts/control_remoto-macos/control_remoto-mac.zip
