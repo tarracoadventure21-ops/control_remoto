@@ -24,7 +24,7 @@ jobs:
           name: control_remoto-windows
           path: dist/control_remoto.exe
 
-  build-macos:
+  build-macos-arm:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,15 +33,31 @@ jobs:
           python-version: "3.12"
       - run: pip install --upgrade pyinstaller
       - run: pyinstaller --windowed --name control_remoto control_remoto.py
-      - name: Comprimir la app de Mac
-        run: ditto -c -k --keepParent dist/control_remoto.app control_remoto-mac.zip
+      - name: Comprimir la app (Apple Silicon)
+        run: ditto -c -k --keepParent dist/control_remoto.app control_remoto-mac-applesilicon.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: control_remoto-macos
-          path: control_remoto-mac.zip
+          name: control_remoto-macos-arm
+          path: control_remoto-mac-applesilicon.zip
+
+  build-macos-intel:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --upgrade pyinstaller
+      - run: pyinstaller --windowed --name control_remoto control_remoto.py
+      - name: Comprimir la app (Intel)
+        run: ditto -c -k --keepParent dist/control_remoto.app control_remoto-mac-intel.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: control_remoto-macos-intel
+          path: control_remoto-mac-intel.zip
 
   release:
-    needs: [build-windows, build-macos]
+    needs: [build-windows, build-macos-arm, build-macos-intel]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -52,4 +68,5 @@ jobs:
         with:
           files: |
             artifacts/control_remoto-windows/control_remoto.exe
-            artifacts/control_remoto-macos/control_remoto-mac.zip
+            artifacts/control_remoto-macos-arm/control_remoto-mac-applesilicon.zip
+            artifacts/control_remoto-macos-intel/control_remoto-mac-intel.zip
