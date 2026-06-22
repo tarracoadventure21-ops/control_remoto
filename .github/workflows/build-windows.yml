@@ -3,11 +3,8 @@ name: Build Control Remoto (Windows .exe)
 on:
   workflow_dispatch:
   push:
-    paths:
-      - "control_remoto.py"
-      - ".github/workflows/build-windows.yml"
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ["v*"]
 
 jobs:
   build:
